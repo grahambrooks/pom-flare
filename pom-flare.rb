@@ -1,5 +1,6 @@
 require 'rexml/document'
 require 'json'
+require_relative './filters.rb'
 
 class Node
   attr_accessor :id, :name, :children
@@ -26,6 +27,10 @@ class PomFlare
     self.all_nodes = {}
   end
 
+  def interesting?(name)
+    $dependency_filters.each { |pattern| return true if name =~ pattern }
+    false
+  end
 
   def expand(name, dictionary)
     if name =~/\$\{\S+}/
@@ -48,7 +53,7 @@ class PomFlare
       end
     end
     if name =~/\$\{\S+}/
-      STDERR.puts "Failed to expand name #{name}"
+      raise "Failed to expand name #{name}"
     end
     name
   end
@@ -62,7 +67,7 @@ class PomFlare
       dictionary.elements['project/artifactId'].text
     end
 
-    'Artifact ID not found'
+    nil
   end
 
   def group_id(dom)
@@ -73,7 +78,7 @@ class PomFlare
     unless dom.elements['project/parent/groupId'].nil?
       return dom.elements['project/parent/groupId'].text
     end
-    'Group id not found'
+    nil
   end
 
   def node(name)
@@ -108,10 +113,18 @@ class PomFlare
         artifact_id = doc.elements['/project/artifactId']
 
         if group_id && artifact_id then
-          component = "#{group_id.text}.#{artifact_id.text}"
+          component = "#{expand(group_id.text, doc)}.#{expand(artifact_id.text, doc)}"
           doc.elements.each('/project/dependencies/dependency') do |e|
-            depend = "#{expand(e.elements['groupId'].text, doc)}.#{e.elements['artifactId'].text}"
-            add_dependency(component, depend)
+            begin
+              child_group_id = e.elements['groupId'].text
+              child_atrifact_is = e.elements['artifactId'].text
+              depend = "#{expand(child_group_id, doc)}.#{child_atrifact_is}"
+              if interesting? depend
+                add_dependency(component, depend)
+              end
+            rescue Exception => e
+              STDERR.puts("Failed to expand name - dependency ignored #{e}")
+            end
           end
         end
       rescue Exception => e
@@ -127,7 +140,9 @@ class PomFlare
       node.children.each do |child|
         imports << child.name
       end
-      dependencies << {'name' => node.name, 'imports' => imports}
+#      if imports.length > 0
+        dependencies << {'name' => node.name, 'imports' => imports}
+#      end
     end
 
     File.open('dependencies.json', 'w') do |f|

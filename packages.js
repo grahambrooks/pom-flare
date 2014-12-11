@@ -13,7 +13,7 @@
                         node.parent = find(name.substring(0, i = name.lastIndexOf(".")));
                         node.parent.children.push(node);
                         node.key = name.substring(i + 1);
-                        node.key = name
+                        //node.key = name;
                     }
                 }
                 return node;

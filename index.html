@@ -11,9 +11,9 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
 
     <!-- Latest compiled and minified JavaScript -->
+    <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
-    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
 </head>
 <body>
 
@@ -50,7 +50,8 @@
     </div>
 </footer>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
+<script src="http://d3js.org/d3.v3.js"></script>
 <script type="text/javascript" src="packages.js"></script>
 <script type="text/javascript">
     var unprocessed_ul = d3.select("#unprocessed");
@@ -58,7 +59,7 @@
     d3.json("unprocessed.json", function (u) {
         u.forEach(function (d) {
             unprocessed_ul.append("li")
-                    .attr("class", "list-group-item  list-group-item-warning")
+                    .attr("class", "list-group-item  list-group-item-warning unprocessed-file")
                     .text(d);
         });
     });
@@ -107,9 +108,11 @@
             .on("mousedown", mousedown);
 
     d3.json("dependencies.json", function (classes) {
-        var nodes = cluster.nodes(packages.root(classes)),
-                links = packages.imports(nodes),
-                splines = bundle(links);
+        var root = packages.root(classes);
+        var nodes = cluster.nodes(root);
+        var imports = packages.imports(nodes);
+        var links = imports;
+        splines = bundle(links);
 
         var path = svg.selectAll("path.link")
                 .data(links)
